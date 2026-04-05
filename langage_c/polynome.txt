@@ -1,0 +1,115 @@
+Enregistrement Monome
+    entier exposant
+    reel coefficient
+    Monome *suivant
+FinEnregistrement
+
+
+Fonction creerMonome(coef : reel, exp : entier, signe : chaine) : Monome*
+Variables p : Monome*
+          sig : entier
+Debut
+    Si signe == "-" Alors
+        sig <-- -1
+    Sinon
+        sig <-- 1
+    FinSi
+
+    p <-- allouer mémoire pour un Monome
+    p->exposant <-- exp
+    p->coefficient <-- coef * sig
+    p->suivant <-- NULL
+    retourner p
+FinFonction
+
+
+Procedure insererMonome(*tete : Monome*, coef : reel, exp : entier, signe : chaine)
+Variables nouveau : Monome*
+Debut
+    nouveau <-- creerMonome(coef, exp, signe)
+    nouveau->suivant <-- *tete
+    *tete <-- nouveau
+FinProcedure
+
+
+Procedure afficherMonome(tete : Monome*)
+Variables p : Monome*
+          premier : booleen
+Debut
+    p <-- tete
+    premier <-- vrai
+
+    TantQue p != NULL Faire
+
+        /* Gestion du signe à l'affichage des autres monomes*/
+        Si premier == faux Alors
+            Si p->coefficient >= 0 Alors
+                Afficher " + "
+            Sinon
+                Afficher " - "
+            FinSi
+        Sinon
+            /* Premier monome */
+            Si p->coefficient < 0 Alors
+                Afficher "-"
+            FinSi
+            premier <-- faux
+        FinSi
+
+        /* Affichage de la valeur absolue */
+        Si p->exposant == 0 Alors
+            Afficher valeur_absolue(p->coefficient)
+        Sinon Si p->exposant == 1 Alors
+            Afficher valeur_absolue(p->coefficient), "X"
+        Sinon
+            Afficher valeur_absolue(p->coefficient), "X^", p->exposant
+        FinSi
+
+        p <-- p->suivant
+    FinTantQue
+FinProcedure
+
+
+Algorithme Polynome
+Variables 
+    rep, signe : chaine de caractere
+    i, exp : entier
+    coef : reel
+    tete : Monome*
+Debut
+    
+    tete <-- NULL
+
+    Afficher "Voulez-vous entrer votre premier monome (oui/non)"
+    Saisir rep
+
+    Si rep == "non" Alors
+        tete <-- NULL
+    Sinon
+        Afficher "Entrer le coefficient et l'exposant du premier monome"
+        Saisir coef, exp
+        Afficher "Entrer le signe du premier monome (+ ou -)"
+        Saisir signe
+        tete <-- creerMonome(coef, exp, signe)
+
+        i <-- 1
+
+        Repeter 
+            Afficher "Voulez vous entrer d'autres (oui/non)"
+            Saisir rep
+
+            Si rep == "oui" Alors
+                i <-- i + 1
+                Afficher "Entrer le coefficient ", i, " et son exposant"
+                Saisir coef, exp
+                Afficher "Entrer le signe du monome (+ ou -)"
+                Saisir signe
+                insererMonome(&tete, coef, exp, signe)
+            FinSi
+
+        Jusqu'a rep == "non"
+    FinSi
+
+    afficherMonome(tete)
+
+Fin
