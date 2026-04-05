@@ -1,7 +1,7 @@
 Enregistrement Monome
-    entier exposant
-    reel coefficient
-    Monome *suivant
+    exposant : entier 
+    coefficient : reel 
+    suivant : Monome*
 FinEnregistrement
 
 
@@ -22,13 +22,59 @@ Debut
     retourner p
 FinFonction
 
-
-Procedure insererMonome(*tete : Monome*, coef : reel, exp : entier, signe : chaine)
+//Question 2 avec insertion simple c'est a dire de debut dans notre cas
+Procedure insererDebutMonome(*tete : Monome*, coef : reel, exp : entier, signe : chaine)
 Variables nouveau : Monome*
 Debut
     nouveau <-- creerMonome(coef, exp, signe)
     nouveau->suivant <-- *tete
     *tete <-- nouveau
+FinProcedure
+
+//Que j'utilise dans insertion trie
+Procedure insererFinMonome(*tete : Monome*, coef : reel, exp : entier, signe : chaine)
+Variables nouveau, courant : Monome*
+Debut
+    nouveau <-- creerMonome(coef, exp, signe)
+    courant <-- *tete
+
+    //Aller au dernier élément 
+    TantQue courant->suivant != NULL Faire
+        courant <-- courant->suivant
+    FinTantQue
+
+    courant->suivant <-- nouveau
+FinProcedure
+
+
+//Question 4 avec insertion trié ordre decroissant
+Procedure insererTrieMonome(*tete : Monome*, coef : reel, exp : entier, signe : chaine)
+Variables 
+    nouveau, p, precedent : Monome*
+Debut
+    nouveau <-- creerMonome(coef, exp, signe)
+
+    //Cas 1 : liste vide OU insertion en tête 
+    Si *tete == NULL OU exp > (*tete)->exposant Alors
+        nouveau->suivant <-- *tete
+        *tete <-- nouveau
+    //Cas 2 : en cas de exposant = 0 on l'insert toujour a la fin pour eviter de rechercher sa place
+    Sinon Si exp == 0 Alors
+        insererFinMonome(tete, coef, exp, signe)
+    Sinon
+        precedent <-- *tete
+        p <-- (*tete)->suivant
+
+        //Recherche de la position 
+        TantQue p != NULL ET p->exposant >= exp Faire
+            precedent <-- p
+            p <-- p->suivant
+        FinTantQue
+
+        //Insertion 
+        nouveau->suivant <-- p
+        precedent->suivant <-- nouveau
+    FinSi
 FinProcedure
 
 
@@ -41,7 +87,7 @@ Debut
 
     TantQue p != NULL Faire
 
-        /* Gestion du signe à l'affichage des autres monomes*/
+        //Gestion du signe à l'affichage des autres monomes
         Si premier == faux Alors
             Si p->coefficient >= 0 Alors
                 Afficher " + "
@@ -49,14 +95,14 @@ Debut
                 Afficher " - "
             FinSi
         Sinon
-            /* Premier monome */
+            //Premier monome 
             Si p->coefficient < 0 Alors
                 Afficher "-"
             FinSi
             premier <-- faux
         FinSi
 
-        /* Affichage de la valeur absolue */
+        //Affichage de la valeur absolue 
         Si p->exposant == 0 Alors
             Afficher valeur_absolue(p->coefficient)
         Sinon Si p->exposant == 1 Alors
@@ -69,6 +115,10 @@ Debut
     FinTantQue
 FinProcedure
 
+Procedure analyseurSyntaxtique(tete : Monome*)
+Debut
+
+FinProcedure
 
 Algorithme Polynome
 Variables 
@@ -104,7 +154,7 @@ Debut
                 Saisir coef, exp
                 Afficher "Entrer le signe du monome (+ ou -)"
                 Saisir signe
-                insererMonome(&tete, coef, exp, signe)
+                insererTrieMonome(&tete, coef, exp, signe)
             FinSi
 
         Jusqu'a rep == "non"
@@ -113,3 +163,4 @@ Debut
     afficherMonome(tete)
 
 Fin
+
