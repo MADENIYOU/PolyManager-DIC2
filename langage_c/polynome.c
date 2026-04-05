@@ -2,16 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <math.h>
-
-/* =====================================================
-   Structure
-   ===================================================== */
-
-typedef struct Monome {
-    int exposant;
-    double coefficient;
-    struct Monome *suivant;
-} Monome;
+#include "polynome.h"
 
 
 /* =====================================================
@@ -229,16 +220,13 @@ void analyserPolynome(char *ch, Monome **tete) {
 
     skipEspaces(ch, &pos);
 
-    // Signe optionnel devant le premier monôme
     if (ch[pos] == '-') {
         signe = -1;
         pos++;
     }
 
-    // Lire le premier monôme (obligatoire)
     analyseMonome(ch, &pos, tete, signe);
 
-    // Lire les monômes suivants
     while (ch[pos] != '\0') {
         skipEspaces(ch, &pos);
 
@@ -248,7 +236,7 @@ void analyserPolynome(char *ch, Monome **tete) {
         } else if (ch[pos] == '-') {
             signe = -1;
             pos++;
-        } else {
+        } else if (ch[pos] != '\0') {
             fprintf(stderr, "ERREUR : '+' ou '-' attendu\n");
             exit(EXIT_FAILURE);
         }
