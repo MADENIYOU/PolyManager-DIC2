@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <math.h>
 #include "polynome.h"
+#include <string.h>
 
 
 /* =====================================================
@@ -202,7 +203,7 @@ void analyseMonome(char *ch, int *pos, Monome **tete, int signe) {
         }
 
     } else {
-        fprintf(stderr, "ERREUR : monome attendu\n");
+        fprintf(stderr, "Polynome vide\n");
         exit(EXIT_FAILURE);
     }
 
@@ -256,6 +257,11 @@ int main(void) {
 
     printf("Entrez votre polynome (ex: -4.5*X^5 + 2*X^4 + X^3 - X + 123) :\n");
     fgets(chaine, sizeof(chaine), stdin);
+
+    // Enlever le \n laissé par fgets
+    int len = strlen(chaine);
+    if (len > 0 && chaine[len - 1] == '\n')
+        chaine[len - 1] = '\0';
 
     analyserPolynome(chaine, &tete);
 
