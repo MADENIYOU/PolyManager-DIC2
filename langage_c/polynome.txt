@@ -1,17 +1,33 @@
+/* ============================================================
+   Structure Monome — mise à jour Question 7
+   Les champs « general » et « utile » sont ajoutés pour le GC.
+   ============================================================ */
 Enregistrement Monome
     exposant    : entier
     coefficient : reel
-    suivant     : Monome*
+    suivant     : Monome*          // chaînage du polynôme (ordre décroissant)
+    general     : Monome*          // [Q7] chaîne TOUS les maillons alloués
+    utile       : entier           // [Q7] marqueur : 1 = utile, 0 = à libérer
 FinEnregistrement
 
 
+/* ============================================================
+   creerMonome — Q2 + mise à jour Q7
+   Chaque allocation est enregistrée dans la liste générale.
+   ============================================================ */
 Fonction creerMonome(coef : reel, exp : entier) : Monome*
 Variables p : Monome*
 Debut
     p <-- allouer mémoire pour un Monome
-    p->exposant <-- exp
+    p->exposant    <-- exp
     p->coefficient <-- coef
-    p->suivant <-- NULL
+    p->suivant     <-- NULL
+
+    // [Q7] : enregistrement dans la liste globale de tous les maillons
+    p->utile   <-- 0
+    p->general <-- tousLesMaillons
+    tousLesMaillons <-- p
+
     retourner p
 FinFonction
 
@@ -246,3 +262,98 @@ Debut
     Afficher "Polynome reconnu : "
     afficherPolynome(tete)
 Fin
+
+
+/* ============================================================
+   QUESTION 7 — GARBAGE COLLECTOR
+   ============================================================
+
+   Principe général
+   ----------------
+   Lors des opérations sur les polynômes (addition, multiplication,
+   etc.), de nombreux maillons intermédiaires sont créés mais ne sont
+   plus accessibles une fois l'opération terminée. Sans recyclage,
+   la mémoire s'épuise rapidement.
+
+   Le mécanisme mis en place repose sur trois éléments :
+
+   1. Le champ « general » dans chaque Monome chaîne TOUS les maillons
+      jamais alloués dans une liste globale tousLesMaillons.
+
+   2. Le tableau global polyUtile[] contient les adresses de tête
+      des polynômes que l'on souhaite conserver.
+
+   3. L'algorithme recycler() effectue deux passes :
+        - Passe 1 (MARQUAGE) : pour chaque polynôme de polyUtile[],
+          parcourir ses maillons et mettre utile = 1.
+        - Passe 2 (BALAYAGE) : parcourir tousLesMaillons ; libérer
+          les maillons non marqués (utile = 0) et effacer les marques
+          des maillons conservés.
+
+   Ce mécanisme est transparent : les fonctions de traitement des
+   polynômes (plus, moins, fois, eval…) n'ont pas besoin d'être
+   modifiées.
+
+   Variables globales
+   ------------------
+   tousLesMaillons : Monome*     // tête de la liste de tous les maillons
+   polyUtile       : tableau de Monome* [MAX_POLY]
+   nbPolyUtile     : entier      // nombre de polynômes enregistrés
+   ============================================================ */
+
+
+/* -----------------------------------------------------------
+   Procedure enregistrerPoly
+   Déclarer un polynôme comme utile pour le protéger du GC.
+   ----------------------------------------------------------- */
+Procedure enregistrerPoly(p : Monome*)
+Debut
+    Si nbPolyUtile >= MAX_POLY Alors
+        Afficher "Avertissement : polyUtile plein"
+        retourner
+    FinSi
+    polyUtile[nbPolyUtile] <-- p
+    nbPolyUtile <-- nbPolyUtile + 1
+FinProcedure
+
+
+/* -----------------------------------------------------------
+   Procedure recycler — algorithme Mark-and-Sweep
+   ----------------------------------------------------------- */
+Procedure recycler()
+Variables i       : entier
+          p       : Monome*
+          courant : Monome**    // pointeur sur le champ en cours de traitement
+          m       : Monome*
+          liberes : entier
+Debut
+    liberes <-- 0
+
+    /* ==== Passe 1 : MARQUAGE ==== */
+    Pour i de 0 à nbPolyUtile - 1 Faire
+        p <-- polyUtile[i]
+        TantQue p != NULL Faire
+            p->utile <-- 1        // marquer le maillon comme utile
+            p <-- p->suivant
+        FinTantQue
+    FinPour
+    // Remarque : un maillon peut être marqué plusieurs fois
+    //            si plusieurs polynômes partagent des maillons ;
+    //            cela n'a aucune importance.
+
+    /* ==== Passe 2 : BALAYAGE ==== */
+    courant <-- adresse(tousLesMaillons)
+    TantQue *courant != NULL Faire
+        m <-- *courant
+        Si m->utile = 1 Alors
+            m->utile <-- 0              // effacer la marque
+            courant  <-- adresse(m->general)  // passer au suivant
+        Sinon
+            *courant <-- m->general     // sauter ce maillon dans la liste
+            liberer(m)                  // rendre la mémoire
+            liberes <-- liberes + 1
+        FinSi
+    FinTantQue
+
+    Afficher "[GC] ", liberes, " maillon(s) libéré(s)."
+FinProcedure

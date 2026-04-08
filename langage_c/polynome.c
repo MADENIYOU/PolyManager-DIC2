@@ -1,104 +1,191 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <math.h>
+/*
+ * polynome.c
+ *
+ * Projet PolyManager DIC2
+ * Questions 1 à 5 : fusion travaux de Kane et Sidibé
+ * Question 7      : Garbage Collector — Madeniyou Sall
+ */
+
 #include "polynome.h"
-#include <string.h>
+
+/* =====================================================
+   Variables globales (Question 7)
+   ===================================================== */
+
+POINTEUR tousLesMaillons  = NULL;
+POINTEUR polyUtile[MAX_POLY];
+int      nbPolyUtile       = 0;
 
 
 /* =====================================================
-   creerMonome
+   Question 2 : Allocation d'un maillon
+   (avec enregistrement dans la liste générale — Q7)
    ===================================================== */
 
-Monome* creerMonome(double coef, int exp) {
-    Monome *p = malloc(sizeof(Monome));
+POINTEUR creerMonome(double coef, int exp) {
+    POINTEUR p = (POINTEUR)malloc(sizeof(Monome));
     if (!p) {
-        fprintf(stderr, "ERREUR : malloc a echoue\n");
+        fprintf(stderr, "Erreur : malloc a échoué\n");
         exit(EXIT_FAILURE);
     }
-    p->exposant = exp;
     p->coefficient = coef;
-    p->suivant = NULL;
+    p->exposant    = exp;
+    p->suivant     = NULL;
+
+    /* Q7 : chaîner dans la liste générale de tous les maillons */
+    p->utile   = 0;
+    p->general = tousLesMaillons;
+    tousLesMaillons = p;
+
     return p;
 }
 
 
 /* =====================================================
-   insererTrieMonome
+   Question 4 : Insertion triée (degrés décroissants)
    ===================================================== */
 
-void insererTrieMonome(Monome **tete, double coef, int exp) {
-    Monome *nouveau = creerMonome(coef, exp);
-    Monome *p, *precedent;
+void insererTrie(POINTEUR *tete, double coef, int exp) {
+    if (coef == 0.0) return;
 
-    // Cas 1 : liste vide OU exposant plus grand que la tête
+    /* Si le degré existe déjà, cumuler les coefficients */
+    POINTEUR curr = *tete;
+    while (curr != NULL) {
+        if (curr->exposant == exp) {
+            curr->coefficient += coef;
+            return;
+        }
+        curr = curr->suivant;
+    }
+
+    POINTEUR nouveau = creerMonome(coef, exp);
+
     if (*tete == NULL || exp > (*tete)->exposant) {
         nouveau->suivant = *tete;
         *tete = nouveau;
-
-    // Cas 2 : exposant = 0 → toujours en fin de liste
-    } else if (exp == 0) {
-        precedent = *tete;
-        while (precedent->suivant != NULL)
-            precedent = precedent->suivant;
-        precedent->suivant = nouveau;
-
-    // Cas 3 : chercher la bonne position
     } else {
-        precedent = *tete;
-        p = (*tete)->suivant;
-        while (p != NULL && p->exposant >= exp) {
-            precedent = p;
-            p = p->suivant;
-        }
-        nouveau->suivant = p;
-        precedent->suivant = nouveau;
+        POINTEUR prec = *tete;
+        while (prec->suivant != NULL && prec->suivant->exposant > exp)
+            prec = prec->suivant;
+        nouveau->suivant = prec->suivant;
+        prec->suivant = nouveau;
     }
 }
 
 
 /* =====================================================
-   afficherPolynome
+   Questions 1 & 2 : Analyseur syntaxique
    ===================================================== */
 
-void afficherPolynome(Monome *tete) {
-    if (tete == NULL) {
-        printf("0\n");
-        return;
+static void passerEspaces(char *s, int *i) {
+    while (s[*i] == ' ' || s[*i] == '\t') (*i)++;
+}
+
+static int lireNaturel(char *s, int *i) {
+    int n = 0;
+    if (!isdigit((unsigned char)s[*i])) {
+        fprintf(stderr, "Erreur de syntaxe : chiffre attendu\n");
+        exit(EXIT_FAILURE);
+    }
+    while (isdigit((unsigned char)s[*i])) {
+        n = n * 10 + (s[*i] - '0');
+        (*i)++;
+    }
+    return n;
+}
+
+static double lireNombre(char *s, int *i) {
+    double n = (double)lireNaturel(s, i);
+    if (s[*i] == '.') {
+        (*i)++;
+        double frac = 0.0, div = 10.0;
+        while (isdigit((unsigned char)s[*i])) {
+            frac += (s[*i] - '0') / div;
+            div  *= 10.0;
+            (*i)++;
+        }
+        n += frac;
+    }
+    return n;
+}
+
+static void analyserMonome(char *s, int *i, POINTEUR *poly, int signe) {
+    double c = 1.0;
+    int    e = 0;
+
+    passerEspaces(s, i);
+
+    if (isdigit((unsigned char)s[*i])) {
+        c = lireNombre(s, i);
+        passerEspaces(s, i);
+        if (s[*i] == '*') {
+            (*i)++;
+            passerEspaces(s, i);
+        }
+        if (s[*i] == 'X' || s[*i] == 'x') {
+            (*i)++;
+            if (s[*i] == '^') { (*i)++; e = lireNaturel(s, i); }
+            else e = 1;
+        }
+    } else if (s[*i] == 'X' || s[*i] == 'x') {
+        (*i)++;
+        if (s[*i] == '^') { (*i)++; e = lireNaturel(s, i); }
+        else e = 1;
+    } else {
+        fprintf(stderr, "Erreur de syntaxe : monôme invalide\n");
+        exit(EXIT_FAILURE);
     }
 
-    Monome *p = tete;
+    insererTrie(poly, c * signe, e);
+}
+
+void analyserPolynome(char *s, POINTEUR *poly) {
+    int i = 0, signe = 1;
+
+    passerEspaces(s, &i);
+
+    if      (s[i] == '-') { signe = -1; i++; }
+    else if (s[i] == '+') {             i++; }
+
+    analyserMonome(s, &i, poly, signe);
+    passerEspaces(s, &i);
+
+    while (s[i] != '\0' && s[i] != '\n') {
+        if      (s[i] == '+') { signe =  1; i++; }
+        else if (s[i] == '-') { signe = -1; i++; }
+        else break;
+
+        analyserMonome(s, &i, poly, signe);
+        passerEspaces(s, &i);
+    }
+}
+
+
+/* =====================================================
+   Question 3 : Affichage
+   ===================================================== */
+
+void afficherPolynome(POINTEUR p) {
+    if (p == NULL) { printf("0\n"); return; }
+
     int premier = 1;
-    double coef;
-
     while (p != NULL) {
-        coef = p->coefficient;
-
-        if (premier) {
-            if (coef < 0)
-                printf("-");
-            premier = 0;
+        if (!premier) {
+            if (p->coefficient >= 0) printf(" + ");
+            else                     printf(" - ");
         } else {
-            if (coef >= 0)
-                printf(" + ");
-            else
-                printf(" - ");
+            if (p->coefficient < 0)  printf("-");
         }
 
-        coef = fabs(coef);
+        double c = fabs(p->coefficient);
+        if (c != 1.0 || p->exposant == 0) printf("%g", c);
 
-        if (p->exposant == 0) {
-            printf("%g", coef);
-        } else if (p->exposant == 1) {
-            if (coef != 1)
-                printf("%g*", coef);
+        if (p->exposant > 0) {
             printf("X");
-        } else {
-            if (coef != 1)
-                printf("%g*", coef);
-            printf("X^%d", p->exposant);
+            if (p->exposant > 1) printf("^%d", p->exposant);
         }
 
+        premier = 0;
         p = p->suivant;
     }
     printf("\n");
@@ -106,167 +193,122 @@ void afficherPolynome(Monome *tete) {
 
 
 /* =====================================================
-   skipEspaces
+   Question 5 : Évaluation
    ===================================================== */
 
-void skipEspaces(char *ch, int *pos) {
-    while (ch[*pos] == ' ')
-        (*pos)++;
+double eval(POINTEUR p, double x) {
+    double res = 0.0;
+    while (p != NULL) {
+        res += p->coefficient * pow(x, (double)p->exposant);
+        p = p->suivant;
+    }
+    return res;
 }
 
 
 /* =====================================================
-   analyseNaturel
+   Question 7 : Garbage Collector
    ===================================================== */
 
-int analyseNaturel(char *ch, int *pos) {
-    if (!isdigit((unsigned char)ch[*pos])) {
-        fprintf(stderr, "ERREUR : chiffre attendu\n");
-        exit(EXIT_FAILURE);
+/*
+ * Enregistrer un polynôme comme « utile » afin que le GC
+ * ne libère pas ses maillons.
+ */
+void enregistrerPoly(POINTEUR p) {
+    if (nbPolyUtile >= MAX_POLY) {
+        fprintf(stderr, "Avertissement : polyUtile plein\n");
+        return;
     }
-    int val = 0;
-    while (isdigit((unsigned char)ch[*pos])) {
-        val = val * 10 + (ch[*pos] - '0');
-        (*pos)++;
-    }
-    return val;
+    polyUtile[nbPolyUtile++] = p;
 }
 
-
-/* =====================================================
-   analyseNombre
-   ===================================================== */
-
-double analyseNombre(char *ch, int *pos) {
-    double partieEntiere = analyseNaturel(ch, pos);
-
-    if (ch[*pos] == '.') {
-        (*pos)++;
-        double partieDec = 0;
-        double nbDecimales = 0.1;
-        while (isdigit((unsigned char)ch[*pos])) {
-            partieDec = partieDec + (ch[*pos] - '0') * nbDecimales;
-            nbDecimales = nbDecimales * 0.1;
-            (*pos)++;
+/*
+ * recycler — deux passes :
+ *
+ *  Passe 1 (MARQUAGE)
+ *    Pour chaque polynôme de polyUtile[], parcourir ses maillons
+ *    et mettre utile = 1.
+ *
+ *  Passe 2 (BALAYAGE)
+ *    Parcourir tousLesMaillons (via ->general) :
+ *      - utile == 1 → effacer la marque, conserver le maillon
+ *      - utile == 0 → retirer de la liste générale, free()
+ */
+void recycler(void) {
+    /* --- Passe 1 : marquage --- */
+    for (int i = 0; i < nbPolyUtile; i++) {
+        POINTEUR p = polyUtile[i];
+        while (p != NULL) {
+            p->utile = 1;
+            p = p->suivant;
         }
-        return partieEntiere + partieDec;
     }
 
-    return partieEntiere;
-}
+    /* --- Passe 2 : balayage --- */
+    POINTEUR *courant = &tousLesMaillons;
+    int liberes = 0;
 
-
-/* =====================================================
-   analyseXpuissance
-   ===================================================== */
-
-int analyseXpuissance(char *ch, int *pos) {
-    if (ch[*pos] != 'X') {
-        fprintf(stderr, "ERREUR : 'X' attendu\n");
-        exit(EXIT_FAILURE);
-    }
-    (*pos)++;
-
-    if (ch[*pos] == '^') {
-        (*pos)++;
-        return analyseNaturel(ch, pos);
-    }
-
-    return 1;
-}
-
-
-/* =====================================================
-   analyseMonome
-   ===================================================== */
-
-void analyseMonome(char *ch, int *pos, Monome **tete, int signe) {
-    double coef = 0;
-    int expo = 0;
-
-    skipEspaces(ch, pos);
-
-    if (ch[*pos] == 'X') {
-        coef = 1;
-        expo = analyseXpuissance(ch, pos);
-
-    } else if (isdigit((unsigned char)ch[*pos])) {
-        coef = analyseNombre(ch, pos);
-        skipEspaces(ch, pos);
-
-        if (ch[*pos] == '*') {
-            (*pos)++;
-            skipEspaces(ch, pos);
-            expo = analyseXpuissance(ch, pos);
+    while (*courant != NULL) {
+        POINTEUR m = *courant;
+        if (m->utile == 1) {
+            m->utile = 0;              /* effacer la marque */
+            courant  = &(m->general); /* passer au suivant */
         } else {
-            expo = 0;
+            *courant = m->general;    /* sauter ce maillon */
+            free(m);
+            liberes++;
         }
-
-    } else {
-        fprintf(stderr, "Polynome vide\n");
-        exit(EXIT_FAILURE);
     }
 
-    insererTrieMonome(tete, coef * signe, expo);
+    printf("[GC] %d maillon(s) libéré(s).\n", liberes);
 }
 
 
 /* =====================================================
-   analyserPolynome
-   ===================================================== */
-
-void analyserPolynome(char *ch, Monome **tete) {
-    int pos = 0;
-    int signe = 1;
-
-    skipEspaces(ch, &pos);
-
-    if (ch[pos] == '-') {
-        signe = -1;
-        pos++;
-    }
-
-    analyseMonome(ch, &pos, tete, signe);
-
-    while (ch[pos] != '\0') {
-        skipEspaces(ch, &pos);
-
-        if (ch[pos] == '+') {
-            signe = 1;
-            pos++;
-        } else if (ch[pos] == '-') {
-            signe = -1;
-            pos++;
-        } else if (ch[pos] != '\0') {
-            fprintf(stderr, "ERREUR : '+' ou '-' attendu\n");
-            exit(EXIT_FAILURE);
-        }
-
-        analyseMonome(ch, &pos, tete, signe);
-    }
-}
-
-
-/* =====================================================
-   main
+   main — démonstration Q1-5 + Q7
    ===================================================== */
 
 int main(void) {
-    char chaine[256];
-    Monome *tete = NULL;
+    char buf[512];
+    POINTEUR p = NULL, q = NULL;
 
-    printf("Entrez votre polynome (ex: -4.5*X^5 + 2*X^4 + X^3 - X + 123) :\n");
-    fgets(chaine, sizeof(chaine), stdin);
+    printf("=== PolyManager DIC2 — Q1-5 + Q7 GC ===\n\n");
 
-    // Enlever le \n laissé par fgets
-    int len = strlen(chaine);
-    if (len > 0 && chaine[len - 1] == '\n')
-        chaine[len - 1] = '\0';
+    printf("Entrez le polynôme P : ");
+    if (!fgets(buf, sizeof(buf), stdin)) return 1;
+    buf[strcspn(buf, "\n")] = '\0';
+    analyserPolynome(buf, &p);
 
-    analyserPolynome(chaine, &tete);
+    printf("Entrez le polynôme Q : ");
+    if (!fgets(buf, sizeof(buf), stdin)) return 1;
+    buf[strcspn(buf, "\n")] = '\0';
+    analyserPolynome(buf, &q);
 
-    printf("Polynome reconnu : ");
-    afficherPolynome(tete);
+    printf("\nP = "); afficherPolynome(p);
+    printf("Q = "); afficherPolynome(q);
+    printf("P(1) = %g\n", eval(p, 1.0));
+    printf("Q(1) = %g\n", eval(q, 1.0));
+
+    /* --- Q7 : on crée un polynôme temporaire non-enregistré ---
+       Il simule un résultat intermédiaire (ex: résultat de plus/fois)
+       dont personne ne gardera l'adresse. */
+    POINTEUR tmp = NULL;
+    insererTrie(&tmp, 3.0, 2);
+    insererTrie(&tmp, 1.0, 0);
+    printf("\n[Q7] Polynôme temporaire (non enregistré) = ");
+    afficherPolynome(tmp);
+    /* tmp n'est PAS enregistré dans polyUtile → ses maillons seront libérés */
+
+    printf("[Q7] Enregistrement de P et Q comme utiles...\n");
+    enregistrerPoly(p);
+    enregistrerPoly(q);
+
+    printf("[Q7] Lancement du GC...\n");
+    recycler();
+
+    printf("\nAprès GC — P et Q intacts :\n");
+    printf("P = "); afficherPolynome(p);
+    printf("Q = "); afficherPolynome(q);
 
     return 0;
 }

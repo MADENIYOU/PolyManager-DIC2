@@ -1,37 +1,46 @@
 #ifndef POLYNOME_H
 #define POLYNOME_H
 
-/* =====================================================
-   Structure
-   ===================================================== */
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <math.h>
+#include <string.h>
 
+/* =====================================================
+   Question 2 & 7 : Définition de la structure
+   ===================================================== */
 typedef struct Monome {
-    int exposant;
     double coefficient;
-    struct Monome *suivant;
-} Monome;
+    int    exposant;
+    struct Monome *suivant;     /* liste triée par degré décroissant */
 
+    /* --- Champs Garbage Collector (Question 7) --- */
+    struct Monome *general;     /* chaîne TOUS les maillons alloués  */
+    int utile;                  /* marqueur : 1 = utile, 0 = libérer */
+} Monome, *POINTEUR;
 
 /* =====================================================
-   Prototypes
+   Variables globales GC (Question 7)
    ===================================================== */
+extern POINTEUR tousLesMaillons;
+#define MAX_POLY 100
+extern POINTEUR polyUtile[MAX_POLY];
+extern int      nbPolyUtile;
 
-Monome* creerMonome(double coef, int exp);
+/* =====================================================
+   Prototypes Q1-5 (Kane + Sidibé)
+   ===================================================== */
+POINTEUR creerMonome(double coef, int exp);
+void     insererTrie(POINTEUR *tete, double coef, int exp);
+void     analyserPolynome(char *s, POINTEUR *poly);
+void     afficherPolynome(POINTEUR p);
+double   eval(POINTEUR p, double x);
 
-void insererTrieMonome(Monome **tete, double coef, int exp);
-
-void afficherPolynome(Monome *tete);
-
-void skipEspaces(char *ch, int *pos);
-
-int analyseNaturel(char *ch, int *pos);
-
-double analyseNombre(char *ch, int *pos);
-
-int analyseXpuissance(char *ch, int *pos);
-
-void analyseMonome(char *ch, int *pos, Monome **tete, int signe);
-
-void analyserPolynome(char *ch, Monome **tete);
+/* =====================================================
+   Prototypes Q7 : Garbage Collector
+   ===================================================== */
+void enregistrerPoly(POINTEUR p);
+void recycler(void);
 
 #endif
