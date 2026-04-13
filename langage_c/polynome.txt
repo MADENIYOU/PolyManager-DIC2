@@ -1,0 +1,359 @@
+/* ============================================================
+   Structure Monome — mise à jour Question 7
+   Les champs « general » et « utile » sont ajoutés pour le GC.
+   ============================================================ */
+Enregistrement Monome
+    exposant    : entier
+    coefficient : reel
+    suivant     : Monome*          // chaînage du polynôme (ordre décroissant)
+    general     : Monome*          // [Q7] chaîne TOUS les maillons alloués
+    utile       : entier           // [Q7] marqueur : 1 = utile, 0 = à libérer
+FinEnregistrement
+
+
+/* ============================================================
+   creerMonome — Q2 + mise à jour Q7
+   Chaque allocation est enregistrée dans la liste générale.
+   ============================================================ */
+Fonction creerMonome(coef : reel, exp : entier) : Monome*
+Variables p : Monome*
+Debut
+    p <-- allouer mémoire pour un Monome
+    p->exposant    <-- exp
+    p->coefficient <-- coef
+    p->suivant     <-- NULL
+
+    // [Q7] : enregistrement dans la liste globale de tous les maillons
+    p->utile   <-- 0
+    p->general <-- tousLesMaillons
+    tousLesMaillons <-- p
+
+    retourner p
+FinFonction
+
+
+Procedure insererTrieMonome(*tete : Monome*, coef : reel, exp : entier)
+Variables nouveau, p, precedent : Monome*
+Debut
+    nouveau <-- creerMonome(coef, exp)
+
+    // Cas 1 : liste vide OU exposant plus grand que la tête
+    Si *tete = NULL OU exp > (*tete)->exposant Alors
+        nouveau->suivant <-- *tete
+        *tete <-- nouveau
+
+    // Cas 2 : exposant = 0 → toujours en fin de liste
+    Sinon Si exp = 0 Alors
+        precedent <-- *tete
+        TantQue precedent->suivant != NULL Faire
+            precedent <-- precedent->suivant
+        FinTantQue
+        precedent->suivant <-- nouveau
+
+    // Cas 3 : chercher la bonne position
+    Sinon
+        precedent <-- *tete
+        p <-- (*tete)->suivant
+        TantQue p != NULL ET p->exposant >= exp Faire
+            precedent <-- p
+            p <-- p->suivant
+        FinTantQue
+        nouveau->suivant <-- p
+        precedent->suivant <-- nouveau
+    FinSi
+FinProcedure
+
+
+Procedure afficherPolynome(tete : Monome*)
+Variables p : Monome*
+          premier : booleen
+          coef : reel
+Debut
+    Si tete = NULL Alors
+        Afficher "0"
+        retourner
+    FinSi
+
+    p <-- tete
+    premier <-- vrai
+
+    TantQue p != NULL Faire
+        coef <-- p->coefficient
+
+        Si premier Alors
+            Si coef < 0 Alors
+                Afficher "-"
+            FinSi
+            premier <-- faux
+        Sinon
+            Si coef >= 0 Alors
+                Afficher " + "
+            Sinon
+                Afficher " - "
+            FinSi
+        FinSi
+
+        coef <-- valeur_absolue(coef)
+
+        Si p->exposant = 0 Alors
+            Afficher coef
+        Sinon Si p->exposant = 1 Alors
+            Si coef != 1 Alors
+                Afficher coef, "*"
+            FinSi
+            Afficher "X"
+        Sinon
+            Si coef != 1 Alors
+                Afficher coef, "*"
+            FinSi
+            Afficher "X^", p->exposant
+        FinSi
+
+        p <-- p->suivant
+    FinTantQue
+    Afficher retour à la ligne
+FinProcedure
+
+
+Procedure skipEspaces(ch : chaine, *pos : entier)
+Debut
+    TantQue ch[*pos] = ' ' Faire
+        *pos <-- *pos + 1
+    FinTantQue
+FinProcedure
+
+
+Fonction analyseNaturel(ch : chaine, *pos : entier) : entier
+Variables val : entier
+Debut
+    Si ch[*pos] n'est pas un chiffre Alors
+        Afficher "ERREUR : chiffre attendu"
+        Arrêter le programme
+    FinSi
+    val <-- 0
+    TantQue ch[*pos] est un chiffre Faire
+        val <-- val * 10 + (ch[*pos] - '0')
+        *pos <-- *pos + 1
+    FinTantQue
+    retourner val
+FinFonction
+
+
+Fonction analyseNombre(ch : chaine, *pos : entier) : reel
+Variables partieEntiere, partieDec, nbDecimales : reel
+Debut
+    partieEntiere <-- analyseNaturel(ch, pos)
+
+    Si ch[*pos] = '.' Alors
+        *pos <-- *pos + 1
+        partieDec <-- 0
+        nbDecimales <-- 0.1
+        TantQue ch[*pos] est un chiffre Faire
+            partieDec <-- partieDec + (ch[*pos] - '0') * nbDecimales
+            nbDecimales <-- nbDecimales * 0.1
+            *pos <-- *pos + 1
+        FinTantQue
+        retourner partieEntiere + partieDec
+    FinSi
+
+    retourner partieEntiere
+FinFonction
+
+
+Fonction analyseXpuissance(ch : chaine, *pos : entier) : entier
+Debut
+    Si ch[*pos] != 'X' Alors
+        Afficher "ERREUR : 'X' attendu"
+        Arrêter le programme
+    FinSi
+    *pos <-- *pos + 1
+
+    Si ch[*pos] = '^' Alors
+        *pos <-- *pos + 1
+        retourner analyseNaturel(ch, pos)
+    FinSi
+
+    retourner 1
+FinFonction
+
+
+Procedure analyseMonome(ch : chaine, *pos : entier, *tete : Monome*, signe : entier)
+Variables coef : reel
+          expo : entier
+Debut
+    skipEspaces(ch, pos)
+    coef <-- 0
+    expo <-- 0
+
+    Si ch[*pos] = 'X' Alors
+        coef <-- 1
+        expo <-- analyseXpuissance(ch, pos)
+
+    Sinon Si ch[*pos] est un chiffre Alors
+        coef <-- analyseNombre(ch, pos)
+        skipEspaces(ch, pos)
+
+        Si ch[*pos] = '*' Alors
+            *pos <-- *pos + 1
+            skipEspaces(ch, pos)
+            expo <-- analyseXpuissance(ch, pos)
+        Sinon
+            expo <-- 0
+        FinSi
+
+    Sinon
+        Afficher "ERREUR : monôme attendu"
+        Arrêter le programme
+    FinSi
+
+    insererTrieMonome(tete, coef * signe, expo)
+FinProcedure
+
+
+Procedure analyserPolynome(ch : chaine, *tete : Monome*)
+Variables pos : entier
+          signe : entier
+Debut
+    pos <-- 0
+    signe <-- 1
+
+    skipEspaces(ch, &pos)
+
+    // Signe optionnel devant le premier monôme
+    Si ch[pos] = '-' Alors
+        signe <-- -1
+        pos <-- pos + 1
+    FinSi
+
+    // Lire le premier monôme (obligatoire)
+    analyseMonome(ch, &pos, tete, signe)
+
+    // Lire les monômes suivants
+    TantQue ch[pos] != '\0' Faire
+        skipEspaces(ch, &pos)
+
+        Si ch[pos] = '+' Alors
+            signe <-- 1
+            pos <-- pos + 1
+        Sinon Si ch[pos] = '-' Alors
+            signe <-- -1
+            pos <-- pos + 1
+        Sinon
+            Afficher "ERREUR : '+' ou '-' attendu"
+            Arrêter le programme
+        FinSi
+
+        analyseMonome(ch, &pos, tete, signe)
+    FinTantQue
+FinProcedure
+
+
+Algorithme Polynome
+Variables chaine : chaine de caracteres
+          tete : Monome*
+Debut
+    tete <-- NULL
+
+    Afficher "Entrez votre polynome (ex: -4.5*X^5 + 2*X^4 + X^3 - X + 123) :"
+    Saisir chaine
+
+    analyserPolynome(chaine, &tete)
+
+    Afficher "Polynome reconnu : "
+    afficherPolynome(tete)
+Fin
+
+
+/* ============================================================
+   QUESTION 7 — GARBAGE COLLECTOR
+   ============================================================
+
+   Principe général
+   ----------------
+   Lors des opérations sur les polynômes (addition, multiplication,
+   etc.), de nombreux maillons intermédiaires sont créés mais ne sont
+   plus accessibles une fois l'opération terminée. Sans recyclage,
+   la mémoire s'épuise rapidement.
+
+   Le mécanisme mis en place repose sur trois éléments :
+
+   1. Le champ « general » dans chaque Monome chaîne TOUS les maillons
+      jamais alloués dans une liste globale tousLesMaillons.
+
+   2. Le tableau global polyUtile[] contient les adresses de tête
+      des polynômes que l'on souhaite conserver.
+
+   3. L'algorithme recycler() effectue deux passes :
+        - Passe 1 (MARQUAGE) : pour chaque polynôme de polyUtile[],
+          parcourir ses maillons et mettre utile = 1.
+        - Passe 2 (BALAYAGE) : parcourir tousLesMaillons ; libérer
+          les maillons non marqués (utile = 0) et effacer les marques
+          des maillons conservés.
+
+   Ce mécanisme est transparent : les fonctions de traitement des
+   polynômes (plus, moins, fois, eval…) n'ont pas besoin d'être
+   modifiées.
+
+   Variables globales
+   ------------------
+   tousLesMaillons : Monome*     // tête de la liste de tous les maillons
+   polyUtile       : tableau de Monome* [MAX_POLY]
+   nbPolyUtile     : entier      // nombre de polynômes enregistrés
+   ============================================================ */
+
+
+/* -----------------------------------------------------------
+   Procedure enregistrerPoly
+   Déclarer un polynôme comme utile pour le protéger du GC.
+   ----------------------------------------------------------- */
+Procedure enregistrerPoly(p : Monome*)
+Debut
+    Si nbPolyUtile >= MAX_POLY Alors
+        Afficher "Avertissement : polyUtile plein"
+        retourner
+    FinSi
+    polyUtile[nbPolyUtile] <-- p
+    nbPolyUtile <-- nbPolyUtile + 1
+FinProcedure
+
+
+/* -----------------------------------------------------------
+   Procedure recycler — algorithme Mark-and-Sweep
+   ----------------------------------------------------------- */
+Procedure recycler()
+Variables i       : entier
+          p       : Monome*
+          courant : Monome**    // pointeur sur le champ en cours de traitement
+          m       : Monome*
+          liberes : entier
+Debut
+    liberes <-- 0
+
+    /* ==== Passe 1 : MARQUAGE ==== */
+    Pour i de 0 à nbPolyUtile - 1 Faire
+        p <-- polyUtile[i]
+        TantQue p != NULL Faire
+            p->utile <-- 1        // marquer le maillon comme utile
+            p <-- p->suivant
+        FinTantQue
+    FinPour
+    // Remarque : un maillon peut être marqué plusieurs fois
+    //            si plusieurs polynômes partagent des maillons ;
+    //            cela n'a aucune importance.
+
+    /* ==== Passe 2 : BALAYAGE ==== */
+    courant <-- adresse(tousLesMaillons)
+    TantQue *courant != NULL Faire
+        m <-- *courant
+        Si m->utile = 1 Alors
+            m->utile <-- 0              // effacer la marque
+            courant  <-- adresse(m->general)  // passer au suivant
+        Sinon
+            *courant <-- m->general     // sauter ce maillon dans la liste
+            liberer(m)                  // rendre la mémoire
+            liberes <-- liberes + 1
+        FinSi
+    FinTantQue
+
+    Afficher "[GC] ", liberes, " maillon(s) libéré(s)."
+FinProcedure
