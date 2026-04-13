@@ -43,4 +43,18 @@ double   eval(POINTEUR p, double x);
 void enregistrerPoly(POINTEUR p);
 void recycler(void);
 
+/* =====================================================
+   Prototypes Q6 : Opérations arithmétiques
+   ===================================================== */
+POINTEUR plus(POINTEUR a, POINTEUR b);
+POINTEUR moins(POINTEUR a, POINTEUR b);
+POINTEUR fois(POINTEUR a, POINTEUR b);
+POINTEUR quotient(POINTEUR a, POINTEUR b, POINTEUR *reste);
+
+/* =====================================================
+   Prototypes Q8 : Versions récursives addition/soustraction
+   ===================================================== */
+POINTEUR plus_rec(POINTEUR a, POINTEUR b);
+POINTEUR moins_rec(POINTEUR a, POINTEUR b);
+
 #endif

@@ -265,7 +265,192 @@ void recycler(void) {
 
 
 /* =====================================================
-   main — démonstration Q1-5 + Q7
+   Question 6 : Opérations arithmétiques
+   ===================================================== */
+
+/*
+ * Copie profonde d'un polynôme (utilitaire interne).
+ */
+static POINTEUR copierPoly(POINTEUR a) {
+    POINTEUR res = NULL;
+    while (a != NULL) {
+        insererTrie(&res, a->coefficient, a->exposant);
+        a = a->suivant;
+    }
+    return res;
+}
+
+/*
+ * plus(a, b) — renvoie a + b (nouveaux maillons, a et b inchangés)
+ */
+POINTEUR plus(POINTEUR a, POINTEUR b) {
+    POINTEUR res = copierPoly(a);
+    while (b != NULL) {
+        insererTrie(&res, b->coefficient, b->exposant);
+        b = b->suivant;
+    }
+    return res;
+}
+
+/*
+ * moins(a, b) — renvoie a − b
+ */
+POINTEUR moins(POINTEUR a, POINTEUR b) {
+    POINTEUR res = copierPoly(a);
+    while (b != NULL) {
+        insererTrie(&res, -(b->coefficient), b->exposant);
+        b = b->suivant;
+    }
+    return res;
+}
+
+/*
+ * fois(a, b) — renvoie a × b
+ *
+ * Formule récursive de l'énoncé :
+ *   P × Q = (aXⁿ + P') × (bXᵐ + Q')
+ *         = ab Xⁿ⁺ᵐ  +  aXⁿ × Q'  +  P' × Q
+ */
+POINTEUR fois(POINTEUR a, POINTEUR b) {
+    if (a == NULL || b == NULL) return NULL;
+
+    /* terme aXⁿ × bXᵐ */
+    POINTEUR res = NULL;
+    insererTrie(&res,
+                a->coefficient * b->coefficient,
+                a->exposant    + b->exposant);
+
+    /* aXⁿ × Q' */
+    POINTEUR t1 = NULL;
+    POINTEUR bReste = b->suivant;
+    while (bReste != NULL) {
+        insererTrie(&t1,
+                    a->coefficient * bReste->coefficient,
+                    a->exposant    + bReste->exposant);
+        bReste = bReste->suivant;
+    }
+
+    /* P' × Q */
+    POINTEUR t2 = fois(a->suivant, b);
+
+    /* res = res + t1 + t2 */
+    POINTEUR tmp = plus(res, t1);
+    POINTEUR final = plus(tmp, t2);
+    return final;
+}
+
+/*
+ * quotient(a, b, reste) — division euclidienne de polynômes
+ *
+ * Algorithme classique de division longue :
+ *   tant que deg(a) >= deg(b) :
+ *     q_i = coef_tete(a) / coef_tete(b)  ×  X^(deg_a - deg_b)
+ *     a   = a - q_i × b
+ *     accumuler q_i dans quotient
+ */
+POINTEUR quotient(POINTEUR a, POINTEUR b, POINTEUR *reste) {
+    if (b == NULL) {
+        fprintf(stderr, "Erreur : division par le polynôme nul\n");
+        exit(EXIT_FAILURE);
+    }
+
+    POINTEUR q   = NULL;
+    POINTEUR rem = copierPoly(a);
+
+    while (rem != NULL && rem->exposant >= b->exposant) {
+        double  coefTerm = rem->coefficient / b->coefficient;
+        int     expTerm  = rem->exposant    - b->exposant;
+
+        insererTrie(&q, coefTerm, expTerm);
+
+        /* rem = rem - coefTerm*X^expTerm * b */
+        POINTEUR termePoly = NULL;
+        insererTrie(&termePoly, coefTerm, expTerm);
+        POINTEUR produit = fois(termePoly, b);
+        rem = moins(rem, produit);
+    }
+
+    if (reste != NULL) *reste = rem;
+    return q;
+}
+
+
+/* =====================================================
+   Question 8 : Versions récursives de plus et moins
+   ===================================================== */
+
+/*
+ * plus_rec(a, b) — addition récursive de deux polynômes
+ *
+ * Cas de base  : l'un des deux est NULL → renvoyer une copie de l'autre.
+ * Cas récursif : comparer les degrés de tête et traiter le monôme
+ *                de plus haut degré en premier.
+ */
+POINTEUR plus_rec(POINTEUR a, POINTEUR b) {
+    if (a == NULL) return copierPoly(b);
+    if (b == NULL) return copierPoly(a);
+
+    if (a->exposant > b->exposant) {
+        POINTEUR res    = creerMonome(a->coefficient, a->exposant);
+        res->suivant    = plus_rec(a->suivant, b);
+        return res;
+    } else if (b->exposant > a->exposant) {
+        POINTEUR res    = creerMonome(b->coefficient, b->exposant);
+        res->suivant    = plus_rec(a, b->suivant);
+        return res;
+    } else {
+        /* même degré : additionner les coefficients */
+        double c = a->coefficient + b->coefficient;
+        if (c == 0.0) {
+            return plus_rec(a->suivant, b->suivant);
+        }
+        POINTEUR res = creerMonome(c, a->exposant);
+        res->suivant = plus_rec(a->suivant, b->suivant);
+        return res;
+    }
+}
+
+/*
+ * moins_rec(a, b) — soustraction récursive
+ *
+ * Identique à plus_rec mais on soustrait b (b→ -b sur chaque coef).
+ */
+POINTEUR moins_rec(POINTEUR a, POINTEUR b) {
+    if (a == NULL && b == NULL) return NULL;
+    if (a == NULL) {
+        /* 0 - b = -b */
+        POINTEUR neg = NULL;
+        POINTEUR tmp = b;
+        while (tmp != NULL) {
+            insererTrie(&neg, -(tmp->coefficient), tmp->exposant);
+            tmp = tmp->suivant;
+        }
+        return neg;
+    }
+    if (b == NULL) return copierPoly(a);
+
+    if (a->exposant > b->exposant) {
+        POINTEUR res = creerMonome(a->coefficient, a->exposant);
+        res->suivant = moins_rec(a->suivant, b);
+        return res;
+    } else if (b->exposant > a->exposant) {
+        POINTEUR res = creerMonome(-(b->coefficient), b->exposant);
+        res->suivant = moins_rec(a, b->suivant);
+        return res;
+    } else {
+        double c = a->coefficient - b->coefficient;
+        if (c == 0.0) {
+            return moins_rec(a->suivant, b->suivant);
+        }
+        POINTEUR res = creerMonome(c, a->exposant);
+        res->suivant = moins_rec(a->suivant, b->suivant);
+        return res;
+    }
+}
+
+
+/* =====================================================
+   main — démonstration Q1-5, Q6, Q7, Q8
    ===================================================== */
 
 int main(void) {
@@ -309,6 +494,30 @@ int main(void) {
     printf("\nAprès GC — P et Q intacts :\n");
     printf("P = "); afficherPolynome(p);
     printf("Q = "); afficherPolynome(q);
+
+    /* --- Q6 : opérations arithmétiques --- */
+    printf("\n=== Q6 : Opérations arithmétiques ===\n");
+    POINTEUR somme = plus(p, q);
+    printf("P + Q = "); afficherPolynome(somme);
+
+    POINTEUR diff = moins(p, q);
+    printf("P - Q = "); afficherPolynome(diff);
+
+    POINTEUR prod = fois(p, q);
+    printf("P * Q = "); afficherPolynome(prod);
+
+    POINTEUR rem2 = NULL;
+    POINTEUR quot = quotient(p, q, &rem2);
+    printf("P / Q = "); afficherPolynome(quot);
+    printf("reste = "); afficherPolynome(rem2);
+
+    /* --- Q8 : versions récursives --- */
+    printf("\n=== Q8 : Versions récursives ===\n");
+    POINTEUR somme_rec = plus_rec(p, q);
+    printf("P + Q (récursif) = "); afficherPolynome(somme_rec);
+
+    POINTEUR diff_rec = moins_rec(p, q);
+    printf("P - Q (récursif) = "); afficherPolynome(diff_rec);
 
     return 0;
 }
