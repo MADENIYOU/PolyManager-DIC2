@@ -174,8 +174,204 @@ public class Polynome {
         return resultat;
     }
 
-    // Getter pour la tête (utile pour les opérations futures)
+    // Getter pour la tête (utile pour les opérations)
     public Monome getTete() {
         return tete;
+    }
+
+    // Setter de tête (utilisé par les opérations statiques)
+    public void setTete(Monome t) {
+        this.tete = t;
+    }
+
+    /**
+     * Copie profonde de ce polynôme.
+     */
+    public Polynome copier() {
+        Polynome res = new Polynome();
+        Monome p = tete;
+        while (p != null) {
+            res.insererTrie(p.coefficient, p.exposant);
+            p = p.suivant;
+        }
+        return res;
+    }
+
+    /* ================================================================
+       Question 6 : Opérations arithmétiques
+       ================================================================ */
+
+    /**
+     * Q6 — Renvoie a + b (a et b inchangés).
+     */
+    public static Polynome plus(Polynome a, Polynome b) {
+        Polynome res = a.copier();
+        Monome p = b.getTete();
+        while (p != null) {
+            res.insererTrie(p.coefficient, p.exposant);
+            p = p.suivant;
+        }
+        return res;
+    }
+
+    /**
+     * Q6 — Renvoie a − b.
+     */
+    public static Polynome moins(Polynome a, Polynome b) {
+        Polynome res = a.copier();
+        Monome p = b.getTete();
+        while (p != null) {
+            res.insererTrie(-p.coefficient, p.exposant);
+            p = p.suivant;
+        }
+        return res;
+    }
+
+    /**
+     * Q6 — Renvoie a × b.
+     * Formule récursive de l'énoncé :
+     *   (aXⁿ + P') × (bXᵐ + Q') = abXⁿ⁺ᵐ + aXⁿ×Q' + P'×Q
+     */
+    public static Polynome fois(Polynome a, Polynome b) {
+        if (a.getTete() == null || b.getTete() == null) return new Polynome();
+
+        Monome headA = a.getTete();
+        Monome headB = b.getTete();
+
+        // terme tête × tête
+        Polynome res = new Polynome();
+        res.insererTrie(headA.coefficient * headB.coefficient,
+                        headA.exposant    + headB.exposant);
+
+        // headA × reste_de_b
+        Polynome bReste = new Polynome();
+        bReste.setTete(headB.suivant);
+        Polynome t1 = new Polynome();
+        Monome p = bReste.getTete();
+        while (p != null) {
+            t1.insererTrie(headA.coefficient * p.coefficient,
+                           headA.exposant    + p.exposant);
+            p = p.suivant;
+        }
+
+        // reste_de_a × b
+        Polynome aReste = new Polynome();
+        aReste.setTete(headA.suivant);
+        Polynome t2 = fois(aReste, b);
+
+        return plus(plus(res, t1), t2);
+    }
+
+    /**
+     * Q6 — Division euclidienne : renvoie le quotient et met le reste dans
+     * le tableau reste[0].
+     */
+    public static Polynome quotient(Polynome a, Polynome b, Polynome[] reste) {
+        if (b.getTete() == null)
+            throw new ArithmeticException("Division par le polynôme nul");
+
+        Polynome q   = new Polynome();
+        Polynome rem = a.copier();
+
+        while (rem.getTete() != null
+               && rem.getTete().exposant >= b.getTete().exposant) {
+
+            double coefT = rem.getTete().coefficient / b.getTete().coefficient;
+            int    expT  = rem.getTete().exposant    - b.getTete().exposant;
+
+            q.insererTrie(coefT, expT);
+
+            Polynome terme = new Polynome();
+            terme.insererTrie(coefT, expT);
+            Polynome prod = fois(terme, b);
+            rem = moins(rem, prod);
+        }
+
+        if (reste != null && reste.length > 0) reste[0] = rem;
+        return q;
+    }
+
+    /* ================================================================
+       Question 8 : Versions récursives de plus et moins
+       ================================================================ */
+
+    /**
+     * Q8 — Addition récursive.
+     *
+     * Cas de base  : l'un des deux est vide → copie de l'autre.
+     * Cas récursif : comparer les degrés de tête.
+     */
+    public static Polynome plusRec(Monome a, Monome b) {
+        if (a == null && b == null) return new Polynome();
+        if (a == null) { Polynome r = new Polynome(); copierChaine(b, r); return r; }
+        if (b == null) { Polynome r = new Polynome(); copierChaine(a, r); return r; }
+
+        Polynome res = new Polynome();
+        if (a.exposant > b.exposant) {
+            Monome nv = new Monome(a.coefficient, a.exposant);
+            Polynome suite = plusRec(a.suivant, b);
+            nv.suivant = suite.getTete();
+            res.setTete(nv);
+        } else if (b.exposant > a.exposant) {
+            Monome nv = new Monome(b.coefficient, b.exposant);
+            Polynome suite = plusRec(a, b.suivant);
+            nv.suivant = suite.getTete();
+            res.setTete(nv);
+        } else {
+            double c = a.coefficient + b.coefficient;
+            if (c == 0.0) {
+                return plusRec(a.suivant, b.suivant);
+            }
+            Monome nv = new Monome(c, a.exposant);
+            Polynome suite = plusRec(a.suivant, b.suivant);
+            nv.suivant = suite.getTete();
+            res.setTete(nv);
+        }
+        return res;
+    }
+
+    /**
+     * Q8 — Soustraction récursive.
+     */
+    public static Polynome moinsRec(Monome a, Monome b) {
+        if (a == null && b == null) return new Polynome();
+        if (a == null) {
+            Polynome r = new Polynome();
+            Monome p = b;
+            while (p != null) { r.insererTrie(-p.coefficient, p.exposant); p = p.suivant; }
+            return r;
+        }
+        if (b == null) { Polynome r = new Polynome(); copierChaine(a, r); return r; }
+
+        Polynome res = new Polynome();
+        if (a.exposant > b.exposant) {
+            Monome nv = new Monome(a.coefficient, a.exposant);
+            Polynome suite = moinsRec(a.suivant, b);
+            nv.suivant = suite.getTete();
+            res.setTete(nv);
+        } else if (b.exposant > a.exposant) {
+            Monome nv = new Monome(-b.coefficient, b.exposant);
+            Polynome suite = moinsRec(a, b.suivant);
+            nv.suivant = suite.getTete();
+            res.setTete(nv);
+        } else {
+            double c = a.coefficient - b.coefficient;
+            if (c == 0.0) {
+                return moinsRec(a.suivant, b.suivant);
+            }
+            Monome nv = new Monome(c, a.exposant);
+            Polynome suite = moinsRec(a.suivant, b.suivant);
+            nv.suivant = suite.getTete();
+            res.setTete(nv);
+        }
+        return res;
+    }
+
+    // Utilitaire interne : copier une chaîne de maillons dans un Polynome
+    private static void copierChaine(Monome src, Polynome dest) {
+        while (src != null) {
+            dest.insererTrie(src.coefficient, src.exposant);
+            src = src.suivant;
+        }
     }
 }
