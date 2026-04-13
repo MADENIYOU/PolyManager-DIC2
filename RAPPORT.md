@@ -8,14 +8,14 @@
 
 ## Membres du groupe
 
-| Membre | Rôle principal |
-|--------|----------------|
-| Kane | Q1-5 (C) — Analyseur syntaxique, codage, affichage, évaluation |
-| Sidibé | Q1-5 (C) — Parser et structure de données |
-| Barro | Q6 (C) — Opérations arithmétiques |
-| Anna | Q8 (C & Java) — Versions récursives |
-| Ngom | Q1-5 (Java) — Analyseur, affichage, évaluation |
-| Sall (Madeniyou) | Q7 (C & Java) — Garbage Collector + intégration finale |
+| Nom complet | Filière | Branche |
+|-------------|---------|---------|
+| Mouhamadou Madeniyou SALL | IABD | `dev-c-gc-sall` / `dev-java-gc-sall` |
+| Adama SIDIBE | INFORMATIQUE | `dev-c-parser-sidibe` |
+| Abdoul Aziz KANE | TR | `dev-c-core-kane` |
+| Anna NDOYE | SSI | `dev-c-rec-anna` / `dev-java-parser-anna` |
+| Mame Aïssatou Samb NGOM | SSI | `dev-c-advanced-ngom` / `dev-java-core-ngom` |
+| Fatoumata BARRO | TR | `dev-c-math-barro` / `dev-java-rec-barro` |
 
 ---
 
@@ -805,14 +805,13 @@ PolyManager-DIC2/
 ├── langage_c/
 │   ├── polynome.h        # Structures, types, prototypes Q1-8
 │   ├── polynome.c        # Implémentation complète Q1-8 + main()
-│   ├── main.c            # main() minimal (ancienne version Sidibé)
-│   └── polynome.txt      # Pseudo-code algorithmique
+│   └── polynome.txt      # Pseudo-code algorithmique (phase de conception)
 └── langage_java/
-    ├── Monome.java       # Structure d'un maillon (avec champs GC)
-    ├── Polynome.java     # Q1-8 : analyseur, affichage, éval, opérations
+    ├── Monome.java            # Structure d'un maillon (avec champs GC)
+    ├── Polynome.java          # Q1-8 : analyseur, affichage, éval, opérations
     ├── GarbageCollector.java  # Q7 : mécanisme mark-and-sweep Java
-    ├── Main.java         # Programme principal (démo Q1-8)
-    └── MainGC.java       # Démo du GC seul (Q7)
+    ├── Main.java              # Programme principal (démo Q1-8)
+    └── MainGC.java            # Démo standalone du GC (Q7)
 ```
 
 ---
@@ -821,10 +820,10 @@ PolyManager-DIC2/
 
 | Branche | Auteur | Contenu |
 |---------|--------|---------|
-| `dev-c-parser-sidibe` | Sidibé | Q1-4 C : parser, insertion triée, affichage |
-| `dev-c-core-kane` | Kane | Q1-5 C+Java : version complète avec main |
-| `dev-c-gc-sall` | Sall | Q7 C : GC + fusion + Q6+Q8 intégration finale |
-| `dev-java-gc-sall` | Sall | Q7 Java : GarbageCollector.java, MainGC.java |
+| `dev-c-parser-sidibe` | Adama SIDIBE | Q1-4 C : parser, insertion triée, affichage |
+| `dev-c-core-kane` | Abdoul Aziz KANE | Q1-5 C+Java : version complète avec main |
+| `dev-c-gc-sall` | M. Madeniyou SALL | Q7 C : GC + fusion + Q6+Q8 intégration finale |
+| `dev-java-gc-sall` | M. Madeniyou SALL | Q7 Java : GarbageCollector.java, MainGC.java |
 | `develop` | Tous | Branche d'intégration — fusion de tous les travaux |
 | `main` | — | Version finale livrée |
 
