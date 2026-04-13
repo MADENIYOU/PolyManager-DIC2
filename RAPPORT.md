@@ -8,14 +8,14 @@
 
 ## Membres du groupe
 
-| Nom complet | Filière | Branche |
-|-------------|---------|---------|
-| Mouhamadou Madeniyou SALL | IABD | `dev-c-gc-sall` / `dev-java-gc-sall` |
-| Adama SIDIBE | INFORMATIQUE | `dev-c-parser-sidibe` |
-| Abdoul Aziz KANE | TR | `dev-c-core-kane` |
-| Anna NDOYE | SSI | `dev-c-rec-anna` / `dev-java-parser-anna` |
-| Mame Aïssatou Samb NGOM | SSI | `dev-c-advanced-ngom` / `dev-java-core-ngom` |
-| Fatoumata BARRO | TR | `dev-c-math-barro` / `dev-java-rec-barro` |
+| Nom complet | Filière |
+|-------------|---------|
+| Mouhamadou Madeniyou SALL | IABD |
+| Adama SIDIBE | INFORMATIQUE |
+| Abdoul Aziz KANE | TR |
+| Anna NDOYE | SSI |
+| Mame Aïssatou Samb NGOM | SSI |
+| Fatoumata BARRO | TR |
 
 ---
 
@@ -816,17 +816,4 @@ PolyManager-DIC2/
 
 ---
 
-## Répartition du travail par branche Git
-
-| Branche | Auteur | Contenu |
-|---------|--------|---------|
-| `dev-c-parser-sidibe` | Adama SIDIBE | Q1-4 C : parser, insertion triée, affichage |
-| `dev-c-core-kane` | Abdoul Aziz KANE | Q1-5 C+Java : version complète avec main |
-| `dev-c-gc-sall` | M. Madeniyou SALL | Q7 C : GC + fusion + Q6+Q8 intégration finale |
-| `dev-java-gc-sall` | M. Madeniyou SALL | Q7 Java : GarbageCollector.java, MainGC.java |
-| `develop` | Tous | Branche d'intégration — fusion de tous les travaux |
-| `main` | — | Version finale livrée |
-
----
-
-*Rapport généré pour le dépôt `PolyManager-DIC2` — DIC 2, Semestre 1, POO Avancée.*
+*Rapport — PolyManager DIC2, DIC 2, Semestre 1, POO Avancée.*
